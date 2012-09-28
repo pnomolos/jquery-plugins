@@ -5,7 +5,7 @@
  * Licensed under the MIT license
  *
  * Author: Felix Gnass [fgnass at neteye dot de]
- * Version: @{VERSION}
+ * Version: 1.0.0
  */
  
 /**
@@ -76,8 +76,7 @@
 	/**
 	 * The default animation strategy does nothing as we expect an animated gif as fallback.
 	 */
-	var animate = function() {
-	};
+	var animate = $.noop;
 	
 	/**
 	 * Utility function to create elements in the SVG namespace.
@@ -128,33 +127,41 @@
 				
 		// Check if Webkit CSS animations are available, as they work much better on the iPad
 		// than setTimeout() based animations.
-		
 		if (document.createElement('div').style.WebkitAnimationName !== undefined) {
-
 			var animations = {};
-		
+			$('<style id="jquery_activity_indicator_style_sheet">').appendTo($('head:first')).get(0);
+			var styleSheet = null;
+			for (var i = document.styleSheets.length - 1; i >=0; i--) {
+				var ss = document.styleSheets[i];
+				if (ss.ownerNode && ss.ownerNode.id == 'jquery_activity_indicator_style_sheet') {
+					styleSheet = ss;
+				}
+			}
+			
 			/**
 			 * Animation strategy that uses dynamically created CSS animation rules.
 			 */
-			animate = function(el, steps, duration) {
-				if (!animations[steps]) {
-					var name = 'spin' + steps;
-					var rule = '@-webkit-keyframes '+ name +' {';
-					for (var i=0; i < steps; i++) {
-						var p1 = Math.round(100000 / steps * i) / 1000;
-						var p2 = Math.round(100000 / steps * (i+1) - 1) / 1000;
-						var value = '% { -webkit-transform:rotate(' + Math.round(360 / steps * i) + 'deg); }\n';
-						rule += p1 + value + p2 + value; 
+			 if (styleSheet) {
+				animate = function(el, steps, duration) {
+					if (!animations[steps]) {
+						var name = 'spin' + steps;
+						var rule = '@-webkit-keyframes '+ name +' {';
+						for (var i=0; i < steps; i++) {
+							var p1 = Math.round(100000 / steps * i) / 1000;
+							var p2 = Math.round(100000 / steps * (i+1) - 1) / 1000;
+							var value = '% { -webkit-transform:rotate(' + Math.round(360 / steps * i) + 'deg); }\n';
+							rule += p1 + value + p2 + value; 
+						}
+						rule += '100% { -webkit-transform:rotate(100deg); }\n}';
+						styleSheet.insertRule(rule, styleSheet.cssRules.length);
+						animations[steps] = name;
 					}
-					rule += '100% { -webkit-transform:rotate(100deg); }\n}';
-					document.styleSheets[0].insertRule(rule, document.styleSheets[0].cssRules.length-1);
-					animations[steps] = name;
-				}
-				el.css('-webkit-animation', animations[steps] + ' ' + duration +'s linear infinite');
-			};
+					el.css('-webkit-animation', animations[steps] + ' ' + duration +'s linear infinite');
+				};
+			}
 		}
-		else {
-		
+		// It wasn't set using the webkit animation methods
+		if (animate == $.noop) {
 			/**
 			 * Animation strategy that transforms a SVG element using setInterval().
 			 */
@@ -174,10 +181,8 @@
 		// VML Rendering
 		// =======================================================================================
 		
-		var s = $('<shape>').css('behavior', 'url(#default#VML)');
-
-		$('body').append(s);
-
+		var s = $('<shape>').css('behavior', 'url(#default#VML)').appendTo('body');
+			
 		if (s.get(0).adj) {
 		
 			// VML support detected. Insert CSS rules for group, shape and stroke.
@@ -220,5 +225,4 @@
 		}
 		$(s).remove();
 	}
-
 })(jQuery);
